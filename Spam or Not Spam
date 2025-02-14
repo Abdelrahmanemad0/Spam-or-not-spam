@@ -1,0 +1,115 @@
+
+# Importing necessary libraries
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+# Importing WordCloud for text visualization
+from wordcloud import WordCloud
+
+# Importing NLTK for natural language processing
+import nltk
+# Downloading NLTK data
+nltk.download('punkt')
+nltk.download('punkt_tab')
+df.info()
+# Rename the columns name
+df.rename(columns = {'v1': 'target', 'v2': 'email'}, inplace = True)
+from sklearn.preprocessing import LabelEncoder
+encoder = LabelEncoder()
+df['target'] = encoder.fit_transform(df['target'])
+df.head() 
+#checking missing values
+df.isnull().sum()
+
+#check duplicate values
+df.duplicated().sum()
+
+
+#remove Duplicate
+df = df.drop_duplicates()
+
+
+df.shape
+
+values = df['target'].value_counts()
+total = values.sum()
+
+percentage_0 = (values[0] /total) * 100
+percentage_1 = (values[1]/ total) *100
+
+print('percentage of 0 :' ,percentage_0)
+print('percentage of 1 :' ,percentage_1)
+
+# or use
+values = df['target'].value_counts(normalize=False) #
+values
+
+import matplotlib.pyplot as plt
+
+# Sample data
+plt.pie(values, labels=['ham', 'spam'], autopct='%1.2f%%', startangle=90)
+plt.title('Email Classification')
+plt.show()
+
+def transform_text(text):
+    # Transform the text to lowercase
+    text = text.lower()
+
+    # Tokenization using NLTK
+    text = nltk.word_tokenize(text) # Tokenization: Breaks the text into individual words or tokens using nltk.word_tokenize
+
+    # Removing special characters
+    y = []
+    for i in text:
+        if i.isalnum(): # is alphanumeric
+            y.append(i)
+
+    # Removing stop words and punctuation
+    text = y[:]
+
+    # Join the processed tokens back into a single string
+    return " ".join(text)
+
+df['transformed_email'] = df['email'].apply(transform_text)
+
+df.head(5)
+
+wc = WordCloud(width = 500, height = 500, min_font_size = 10, background_color = 'white')
+spam_wc = wc.generate(df[df['target'] == 1]['transformed_email'].str.cat(sep = " "))
+plt.figure(figsize = (15,6))
+plt.imshow(spam_wc)
+plt.show()
+ham_wc = wc.generate(df[df['target'] == 0]['transformed_email'].str.cat(sep = " "))
+plt.figure(figsize = (15,6))
+plt.imshow(ham_wc)
+plt.show()
+
+from sklearn.feature_extraction.text import CountVectorizer
+cv = CountVectorizer()
+X = cv.fit_transform(df['transformed_email']).toarray()
+y = df['target'].values
+X_df = pd.DataFrame(X)
+X_df.head()
+from sklearn.model_selection import train_test_split
+X_train, X_test , y_train, y_test = train_test_split(X,y,test_size = 0.20, random_state = 2)
+from sklearn.neighbors import KNeighborsClassifier
+knn = KNeighborsClassifier(n_neighbors=3)
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+from sklearn.metrics import accuracy_score
+accuracy_score(y_test, y_pred)
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(y_test, y_pred)
+import seaborn as sns
+# Create a heatmap
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=True, annot_kws={"size": 16}, linewidths=0.1, linecolor='gray')
+# Add titles and labels
+plt.title('Confusion Matrix', fontsize=18)
+plt.xlabel('Predicted Labels', fontsize=14)
+plt.ylabel('Actual Labels', fontsize=14)
+
+# Display the plot
+plt.tight_layout()
+plt.show()
